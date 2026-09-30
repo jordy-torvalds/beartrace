@@ -1,0 +1,14 @@
+node_modules/
+dist/
+apps/dashboard/public/dashboard.json
+apps/dashboard/public/dashboard.enc.json
+*.tsbuildinfo
+.DS_Store
+
+# This repository is public engine code. Personal ledger records belong in a
+# separate private repository and must never be staged here.
+/topics/
+/artifacts/
+/sessions/
+/evidence/
+/.beartrace-ledger/

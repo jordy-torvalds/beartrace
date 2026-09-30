@@ -1,0 +1,45 @@
+name: Notify BearTrace dashboard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "topics/**"
+      - "artifacts/**"
+      - "sessions/**"
+      - "evidence/**"
+      - "config/**"
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check dispatch configuration
+        env:
+          ENGINE_REPOSITORY: ${{ vars.BEARTRACE_ENGINE_REPOSITORY }}
+          DEPLOY_TOKEN: ${{ secrets.BEARTRACE_DEPLOY_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ENGINE_REPOSITORY" || { echo "Missing variable: BEARTRACE_ENGINE_REPOSITORY"; exit 1; }
+          test -n "$DEPLOY_TOKEN" || { echo "Missing secret: BEARTRACE_DEPLOY_TOKEN"; exit 1; }
+
+      - name: Request encrypted dashboard rebuild
+        env:
+          ENGINE_REPOSITORY: ${{ vars.BEARTRACE_ENGINE_REPOSITORY }}
+          DEPLOY_TOKEN: ${{ secrets.BEARTRACE_DEPLOY_TOKEN }}
+          LEDGER_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          payload="$(jq -cn --arg sha "$LEDGER_SHA" '{event_type:"ledger-updated",client_payload:{ledger_sha:$sha}}')"
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer $DEPLOY_TOKEN" \
+            --header "X-GitHub-Api-Version: 2026-03-10" \
+            "https://api.github.com/repos/$ENGINE_REPOSITORY/dispatches" \
+            --data "$payload"
