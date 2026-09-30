@@ -15,7 +15,7 @@ Public engine, private Ledger contract, encrypted Projection, and GitHub Pages w
 | QA-05 | Evidence on rejected Session | Repository validation fails | Pass |
 | QA-06 | Failed/partial recall | History remains; only retested capabilities refresh | Pass |
 | QA-07 | Projection reproducibility | Repeated builds are byte-identical | Pass |
-| QA-08 | Projection privacy | Markdown bodies, rationale, source URL, and absolute path are absent | Pass |
+| QA-08 | Projection privacy | Artifact 보고서 본문만 암호화 대상 Projection에 포함되고 Session/Evidence 본문, AI rationale, absolute path는 제외됨 | Pass |
 | QA-09 | Unicode encryption round trip | AES-GCM envelope decrypts to the exact Projection | Pass |
 | QA-10 | Wrong passphrase | Decryption fails with a generic error | Pass |
 | QA-11 | Ciphertext tampering | Modified ciphertext, IV, salt, or authenticated metadata is rejected | Pass |

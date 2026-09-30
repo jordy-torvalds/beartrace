@@ -66,9 +66,9 @@ pnpm dashboard:dev
 - 직접 작성: private Ledger를 Obsidian/에디터로 수정하고 push합니다.
 - AI 작성: [AI authoring contract](docs/ai-authoring.md)에 따라 올바른 레코드와 경로를 선택하고 branch/PR로 제안합니다.
 - 자동 배포: private Ledger의 push가 public engine에 rebuild 이벤트를 보내고, Projection을 암호화해 GitHub Pages에 게시합니다.
-- 읽기: Dashboard는 `dashboard.enc.json`만 내려받아 현재 탭에서 복호화하며 쓰기 기능이나 GitHub token을 가지지 않습니다.
+- 읽기: Dashboard는 `dashboard.enc.json`만 내려받아 현재 탭에서 복호화하며 쓰기 기능이나 GitHub token을 가지지 않습니다. Artifact Markdown 본문은 암호화된 Projection에 포함되어 `보고서` 화면에서 검색하고 읽을 수 있습니다.
 
-설정 절차와 secret 권한은 [운영 문서](docs/operations.md)를 따릅니다. 아직 GitHub 저장소 생성, secret 설정, Pages 활성화 또는 실제 배포는 수행하지 않았습니다.
+설정 절차와 secret 권한은 [운영 문서](docs/operations.md)를 따릅니다.
 
 ## 보안 한계
 

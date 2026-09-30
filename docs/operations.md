@@ -64,7 +64,7 @@ Private validation과 Projection 명령의 상세 출력은 public Actions 로�
 3. Pages URL에서 잠금 화면이 보이는지 확인합니다.
 4. 잘못된 passphrase로 열리지 않는지 확인합니다.
 5. 올바른 passphrase로 현재 Projection이 보이는지 확인합니다.
-6. 브라우저 Network에서 내려받은 파일이 `dashboard.enc.json`이고 Topic 제목이나 Evidence metadata가 평문으로 검색되지 않는지 확인합니다.
+6. 브라우저 Network에서 내려받은 파일이 `dashboard.enc.json`이고 Topic 제목, Artifact 본문, Evidence metadata가 평문으로 검색되지 않는지 확인합니다.
 7. private Ledger에 합성 Topic 하나를 추가해 자동 rebuild와 갱신을 확인한 뒤 필요하면 합성 기록을 제거합니다.
 
 완료 증빙은 `docs/external-verification.md`에 workflow run, Pages URL, 배포 commit, 암호문 검사 결과를 기록합니다.

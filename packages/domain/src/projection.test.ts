@@ -28,7 +28,7 @@ function artifact(topicId = "topic-alpha"): ArtifactRecord {
   return {
     kind: "artifact",
     path: "artifacts/artifact-alpha.md",
-    body: "Secret artifact body must stay out.",
+    body: "# Artifact body\n\nReadable report content.",
     frontmatter: {
       schema_version: 1,
       id: "artifact-alpha",
@@ -260,7 +260,7 @@ describe("buildProjection", () => {
     });
   });
 
-  it("ignores future records and omits bodies, rationales, and absolute paths", () => {
+  it("includes artifact reports but omits private session and evidence details", () => {
     const projection = buildProjection(
       repo({
         artifacts: [artifact()],
@@ -273,7 +273,16 @@ describe("buildProjection", () => {
     const serialized = JSON.stringify(projection);
 
     expect(projection.topics[0]!.evidence).toEqual([]);
-    expect(serialized).not.toContain("Secret artifact body");
+    expect(projection.artifacts).toEqual([
+      expect.objectContaining({
+        id: "artifact-alpha",
+        topic_ids: ["topic-alpha"],
+        body_markdown: "# Artifact body\n\nReadable report content.",
+      }),
+    ]);
+    expect(serialized).toContain("Readable report content");
+    expect(serialized).not.toContain("Session body must stay out");
+    expect(serialized).not.toContain("Proof body must stay out");
     expect(serialized).not.toContain("Rationale must stay out");
     expect(serialized).not.toContain("/Users/");
   });

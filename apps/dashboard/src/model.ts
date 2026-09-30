@@ -1,6 +1,7 @@
 import type {
   Capability,
   CapabilityFreshness,
+  ArtifactProjection,
   Projection,
   SummaryLabel,
   TopicProjection,
@@ -16,11 +17,28 @@ export const SUMMARY_ORDER: SummaryLabel[] = [
 ];
 
 export const CAPABILITY_LABELS: Record<Capability, string> = {
-  review: "Review",
-  explain: "Explain",
-  transfer: "Transfer",
-  apply: "Apply",
+  review: "검토",
+  explain: "설명",
+  transfer: "전이",
+  apply: "적용",
 };
+
+export const SUMMARY_LABELS_KO: Record<SummaryLabel | "NEW", string> = {
+  NEW: "새 주제",
+  COLLECTED: "수집됨",
+  REVIEWED: "검토됨",
+  EXPLAINED: "설명 검증",
+  UNDERSTOOD: "이해 검증",
+  APPLIED: "적용됨",
+  RETAINED: "기억 유지",
+};
+
+export const FRESHNESS_LABELS = {
+  never: "미검증",
+  valid: "유효",
+  due: "복습 필요",
+  unverified: "재검증 필요",
+} as const;
 
 export function currentLabel(topic: TopicProjection): SummaryLabel | "NEW" {
   for (let i = SUMMARY_ORDER.length - 1; i >= 0; i -= 1) {
@@ -36,11 +54,36 @@ export function labelCount(projection: Projection, label: SummaryLabel): number 
 
 export function overviewMetrics(projection: Projection) {
   return [
-    { label: "Topics", value: projection.topics.length },
-    { label: "Understood", value: labelCount(projection, "UNDERSTOOD") },
-    { label: "Applied", value: labelCount(projection, "APPLIED") },
-    { label: "Retained", value: labelCount(projection, "RETAINED") },
+    { label: "전체 주제", value: projection.topics.length },
+    { label: "이해 검증", value: labelCount(projection, "UNDERSTOOD") },
+    { label: "실제 적용", value: labelCount(projection, "APPLIED") },
+    { label: "기억 유지", value: labelCount(projection, "RETAINED") },
   ];
+}
+
+export function filterArtifacts(
+  projection: Projection,
+  query: string,
+): ArtifactProjection[] {
+  const normalized = query.trim().toLocaleLowerCase("ko-KR");
+  const topicTitles = new Map(projection.topics.map((topic) => [topic.id, topic.title]));
+
+  return [...projection.artifacts]
+    .filter((artifact) => {
+      if (normalized.length === 0) return true;
+      const searchable = [
+        artifact.title,
+        artifact.body_markdown,
+        artifact.source.value,
+        ...artifact.topic_ids,
+        ...artifact.topic_ids.map((id) => topicTitles.get(id) ?? ""),
+      ].join(" ").toLocaleLowerCase("ko-KR");
+      return searchable.includes(normalized);
+    })
+    .sort((a, b) => {
+      if (a.date !== b.date) return a.date > b.date ? -1 : 1;
+      return a.title.localeCompare(b.title, "ko-KR");
+    });
 }
 
 export function recallDueTopics(projection: Projection): TopicProjection[] {

@@ -18,7 +18,7 @@
 1. private Ledger 저장소인지 확인합니다. Public engine 저장소라면 중단하고 private Ledger 경로를 확인합니다.
 2. 기존 `topics/`를 검색해 같은 개념이 있는지 확인합니다. 표현만 다른 기존 Topic이 있으면 새 Topic을 만들지 않습니다.
 3. 적합한 Topic이 없을 때만 Topic을 먼저 만듭니다. ID는 소문자 kebab-case이며 생성 후 바꾸지 않습니다.
-4. 외부 또는 AI 생성 학습 자료는 Artifact로 저장합니다. 여러 Topic에 걸치면 하나의 Artifact에서 모든 `topic_ids`를 참조합니다.
+4. 외부 또는 AI 생성 학습 자료는 Artifact로 저장합니다. 여러 Topic에 걸치면 하나의 Artifact에서 모든 `topic_ids`를 참조합니다. Artifact 본문은 암호화된 Dashboard Projection에 포함되어 `보고서` 화면에서 렌더링되므로, 제목 구조·목록·표·코드 블록을 갖춘 읽기 좋은 Markdown으로 작성합니다.
 5. 학습 대화나 테스트가 있었다면 성공 여부와 관계없이 Session에 시도·오답·교정·피드백을 보존합니다. 실패한 Recall도 Session입니다.
 6. Topic의 `validation_criteria`를 기준으로 AI 평가와 rubric 결과를 작성합니다.
 7. 평가가 충분하더라도 Evidence 후보와 부여할 capability를 사용자에게 보여주고 명시적으로 승인을 받은 뒤에만 Evidence를 생성합니다. 사용자의 “저장해 주세요”, “Evidence로 승격해 주세요”처럼 후보에 대한 분명한 요청은 승인으로 봅니다.
@@ -62,6 +62,7 @@ Recall은 별도 능력이 아닙니다. Recall Session에는 `recall_attempt`�
 - AI 평가가 부족한데 `sufficient`로 바꾸거나 override 근거를 대신 만들어내지 않습니다.
 - 원문 transcript 전체가 필요하지 않다면 개인정보와 민감정보까지 복사하지 않습니다.
 - `dist/`, Pages 산출물, `dashboard.enc.json`을 원장처럼 수정하지 않습니다.
+- Artifact 본문은 암호화되어 배포되지만 passphrase 유출 시 읽을 수 있으므로 회사 기밀, 개인정보, 토큰, 내부 URL을 넣지 않습니다.
 
 ## 검증 명령
 

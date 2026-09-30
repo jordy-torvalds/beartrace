@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Projection, TopicProjection } from "@beartrace/domain";
-import { currentLabel, dueCapabilities, labelCount, recallDueTopics, recentTopics, unverifiedTopics } from "./model.js";
+import { currentLabel, dueCapabilities, filterArtifacts, labelCount, recallDueTopics, recentTopics, unverifiedTopics } from "./model.js";
 
 const baseTopic = {
   id: "topic-a",
@@ -34,6 +34,7 @@ function projection(topics: TopicProjection[]): Projection {
     schema_version: 1,
     build_version: "test",
     as_of: "2026-02-10",
+    artifacts: [],
     topics,
   };
 }
@@ -108,5 +109,35 @@ describe("dashboard projection helpers", () => {
       { capability: "apply", status: "unverified", last_validated_at: "2026-01-05", next_recall_due: "2026-01-12" },
     ] });
     expect(dueCapabilities(item).map((entry) => entry.capability)).toEqual(["explain", "apply"]);
+  });
+
+  it("orders reports newest first and searches their body and topic title", () => {
+    const data = projection([
+      topic({ id: "kafka", title: "Kafka 리밸런싱" }),
+    ]);
+    data.artifacts = [
+      {
+        id: "old-report",
+        kind: "article",
+        title: "오래된 보고서",
+        date: "2026-01-01",
+        topic_ids: ["kafka"],
+        source: { kind: "other", value: "chatgpt" },
+        body_markdown: "consumer group 기본 개념",
+      },
+      {
+        id: "new-report",
+        kind: "other",
+        title: "최신 보고서",
+        date: "2026-02-01",
+        topic_ids: ["kafka"],
+        source: { kind: "other", value: "chatgpt" },
+        body_markdown: "협력적 리밸런싱 분석",
+      },
+    ];
+
+    expect(filterArtifacts(data, "").map((artifact) => artifact.id)).toEqual(["new-report", "old-report"]);
+    expect(filterArtifacts(data, "협력적").map((artifact) => artifact.id)).toEqual(["new-report"]);
+    expect(filterArtifacts(data, "Kafka 리밸런싱")).toHaveLength(2);
   });
 });

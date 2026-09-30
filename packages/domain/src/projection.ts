@@ -4,7 +4,7 @@ import type { BearTraceConfig } from "./schemas/config.js";
 import type { ParsedRepository } from "./validate.js";
 import { addDays, diffDays } from "./dates.js";
 
-export const PROJECTION_BUILD_VERSION = "0.1.0";
+export const PROJECTION_BUILD_VERSION = "0.2.0";
 
 export type FreshnessStatus = "never" | "valid" | "due" | "unverified";
 
@@ -13,6 +13,16 @@ export interface ArtifactSummary {
   kind: string;
   title: string;
   date: string;
+}
+
+export interface ArtifactProjection extends ArtifactSummary {
+  topic_ids: string[];
+  source: {
+    kind: string;
+    value: string;
+    note?: string;
+  };
+  body_markdown: string;
 }
 
 export interface SessionSummary {
@@ -85,6 +95,7 @@ export interface Projection {
   schema_version: number;
   build_version: string;
   as_of: string;
+  artifacts: ArtifactProjection[];
   topics: TopicProjection[];
 }
 
@@ -253,6 +264,24 @@ export function buildProjection(repo: ParsedRepository, config: BearTraceConfig,
     (t) => t.frontmatter.id,
   );
 
+  const artifacts: ArtifactProjection[] = stableSortByDateThenId(
+    visibleRepo.artifacts,
+    (artifact) => artifact.frontmatter.date,
+    (artifact) => artifact.frontmatter.id,
+  ).map((artifact) => ({
+    id: artifact.frontmatter.id,
+    kind: artifact.frontmatter.kind,
+    title: artifact.frontmatter.title,
+    date: artifact.frontmatter.date,
+    topic_ids: [...artifact.frontmatter.topic_ids].sort(),
+    source: {
+      kind: artifact.frontmatter.source.kind,
+      value: artifact.frontmatter.source.value,
+      ...(artifact.frontmatter.source.note ? { note: artifact.frontmatter.source.note } : {}),
+    },
+    body_markdown: artifact.body,
+  }));
+
   const topics: TopicProjection[] = sortedTopics.map((topic) => {
     const topicId = topic.frontmatter.id;
 
@@ -356,6 +385,7 @@ export function buildProjection(repo: ParsedRepository, config: BearTraceConfig,
     schema_version: SCHEMA_VERSION,
     build_version: PROJECTION_BUILD_VERSION,
     as_of: asOf,
+    artifacts,
     topics,
   };
 }

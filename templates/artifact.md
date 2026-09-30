@@ -12,6 +12,6 @@ source:
   # note: optional free-text note about the source
 ---
 
-The learning material itself: notes, quotes, a summary, exercises copied
-in for reference. This body is canonical learning material but is never
-exposed in the generated projection.
+The learning material itself: a report, notes, summary, or exercises.
+This body is included in the encrypted dashboard Projection so it can be
+read in the report library. Do not store secrets or confidential material.

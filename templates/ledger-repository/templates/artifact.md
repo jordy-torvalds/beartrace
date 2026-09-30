@@ -11,4 +11,4 @@ source:
   value: "https://example.com/source"
 ---
 
-Canonical learning material, report, or source notes. This body is private and excluded from the Projection.
+Canonical learning material, report, or source notes. This body is included in the encrypted dashboard Projection so it can be read in the report library. Do not store secrets or confidential material.
