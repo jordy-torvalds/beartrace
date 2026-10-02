@@ -455,6 +455,8 @@ function ReportLibrary({ projection, selectedArtifactId, setSelectedArtifactId, 
 
 function ReportDetail({ artifact, topicsById }: { artifact: ArtifactProjection; topicsById: Map<string, TopicProjection> }) {
   const sourceIsLink = artifact.source.kind === "url" && /^https?:\/\//.test(artifact.source.value);
+  const htmlAttachment = artifact.attachments?.find((attachment) => attachment.media_type === "text/html");
+  const [view, setView] = useState<"markdown" | "html">("markdown");
 
   return (
     <article className="panel report-reader">
@@ -473,13 +475,50 @@ function ReportDetail({ artifact, topicsById }: { artifact: ArtifactProjection; 
         </div>
         {artifact.source.note ? <p className="source-note">{artifact.source.note}</p> : null}
       </header>
-      <div className="markdown-body">
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
-          a: ({ children, ...props }) => <a {...props} target="_blank" rel="noreferrer">{children}</a>,
-        }}>
-          {artifact.body_markdown}
-        </ReactMarkdown>
-      </div>
+      {htmlAttachment ? (
+        <div className="report-view-tabs" role="tablist" aria-label="보고서 원문 보기">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "markdown"}
+            className={view === "markdown" ? "report-view-tab active" : "report-view-tab"}
+            onClick={() => setView("markdown")}
+          >
+            구조화된 Markdown
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "html"}
+            className={view === "html" ? "report-view-tab active" : "report-view-tab"}
+            onClick={() => setView("html")}
+          >
+            HTML 원본
+          </button>
+        </div>
+      ) : null}
+      {view === "html" && htmlAttachment ? (
+        <section className="html-original" aria-label="HTML 원본">
+          <p className="html-original-note">
+            잠금 해제된 현재 브라우저에서만 표시합니다. 스크립트는 실행하지 않습니다. 파일명: {htmlAttachment.path}
+          </p>
+          <iframe
+            title={`${artifact.title} HTML 원본`}
+            className="html-original-frame"
+            sandbox=""
+            referrerPolicy="no-referrer"
+            srcDoc={htmlAttachment.content}
+          />
+        </section>
+      ) : (
+        <div className="markdown-body">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+            a: ({ children, ...props }) => <a {...props} target="_blank" rel="noreferrer">{children}</a>,
+          }}>
+            {artifact.body_markdown}
+          </ReactMarkdown>
+        </div>
+      )}
     </article>
   );
 }

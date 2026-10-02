@@ -23,6 +23,13 @@ export interface ArtifactProjection extends ArtifactSummary {
     note?: string;
   };
   body_markdown: string;
+  attachments?: ArtifactAttachmentProjection[];
+}
+
+export interface ArtifactAttachmentProjection {
+  path: string;
+  media_type: string;
+  content: string;
 }
 
 export interface SessionSummary {
@@ -280,6 +287,11 @@ export function buildProjection(repo: ParsedRepository, config: BearTraceConfig,
       ...(artifact.frontmatter.source.note ? { note: artifact.frontmatter.source.note } : {}),
     },
     body_markdown: artifact.body,
+    attachments: (artifact.attachments ?? []).map((attachment) => ({
+      path: attachment.path,
+      media_type: attachment.media_type,
+      content: attachment.content,
+    })),
   }));
 
   const topics: TopicProjection[] = sortedTopics.map((topic) => {

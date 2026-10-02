@@ -14,6 +14,9 @@ export const DiagnosticCodes = {
   LINEAGE_INCONSISTENT: "E_LINEAGE_INCONSISTENT",
   SELF_REFERENCE: "E_SELF_REFERENCE",
   CYCLE: "E_CYCLE",
+  ATTACHMENT_PATH: "E_ATTACHMENT_PATH",
+  ATTACHMENT_MISSING: "E_ATTACHMENT_MISSING",
+  ATTACHMENT_UNSUPPORTED: "E_ATTACHMENT_UNSUPPORTED",
 } as const;
 
 export function diagnostic(code: string, path: string, message: string): Diagnostic {

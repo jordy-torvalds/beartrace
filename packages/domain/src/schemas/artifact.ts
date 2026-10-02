@@ -8,6 +8,15 @@ import {
   sourceDescriptorSchema,
 } from "./common.js";
 
+export const artifactAttachmentSchema = z
+  .object({
+    path: nonEmptyStringSchema,
+    media_type: nonEmptyStringSchema,
+  })
+  .strict();
+
+export type ArtifactAttachment = z.infer<typeof artifactAttachmentSchema>;
+
 export const artifactFrontmatterSchema = z
   .object({
     schema_version: z.literal(SCHEMA_VERSION),
@@ -17,6 +26,7 @@ export const artifactFrontmatterSchema = z
     date: isoDateSchema,
     topic_ids: z.array(idSchema).min(1),
     source: sourceDescriptorSchema,
+    attachments: z.array(artifactAttachmentSchema).optional(),
   })
   .strict();
 
@@ -27,4 +37,9 @@ export interface ArtifactRecord {
   path: string;
   frontmatter: ArtifactFrontmatter;
   body: string;
+  attachments?: ArtifactAttachmentRecord[];
+}
+
+export interface ArtifactAttachmentRecord extends ArtifactAttachment {
+  content: string;
 }

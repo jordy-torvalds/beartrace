@@ -17,6 +17,7 @@ topics/
 artifacts/
 sessions/
 evidence/
+sources/
 config/beartrace.config.json
 AGENTS.md
 .github/workflows/notify-dashboard.yml
@@ -49,13 +50,15 @@ Private Ledger의 Settings → Secrets and variables → Actions에서 설정합
 
 GitHub의 repository dispatch endpoint가 fine-grained token에 `Contents: write`를 요구하기 때문에 이 권한이 필요합니다. 이 token은 private Ledger를 읽거나 Pages를 배포할 권한이 없어야 합니다.
 
-`main`에 학습 자료가 push되면 `notify-dashboard.yml`이 `ledger-updated` 이벤트를 보냅니다. Public engine의 `deploy.yml`이 private Ledger를 checkout하고 다음을 수행합니다.
+`main`에 학습 자료나 원본 첨부 파일이 push되면 `notify-dashboard.yml`이 `ledger-updated` 이벤트를 보냅니다. Public engine의 `deploy.yml`이 private Ledger를 checkout하고 다음을 수행합니다.
 
 ```text
 validate → projection → dashboard build → encryption → Pages artifact → deploy
 ```
 
 Private validation과 Projection 명령의 상세 출력은 public Actions 로그에 노출하지 않습니다. 실패하면 private workspace에서 같은 검증을 실행해 진단합니다.
+
+Artifact의 `attachments`에는 Ledger 내부의 상대 경로와 `media_type: text/html`을 선언할 수 있습니다. 배포 시 HTML 원문은 평문 Pages 파일로 복사하지 않고 암호화 Projection에 포함하며, 잠금 해제 후 대시보드의 `HTML 원본` 탭에서 스크립트가 비활성화된 sandbox 미리보기로 표시합니다. 첨부 경로는 Ledger 루트 밖으로 나갈 수 없습니다.
 
 ## 4. 최초 배포 검증
 

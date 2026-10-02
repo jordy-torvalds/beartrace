@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -29,5 +29,81 @@ describe("CLI integration", () => {
     expect(second.ok).toBe(true);
     expect(first.checksum).toBe(second.checksum);
     expect(await readFile(firstPath, "utf8")).toBe(await readFile(secondPath, "utf8"));
+  });
+
+  it("loads declared HTML attachments into the projection and rejects paths outside the ledger", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "beartrace-attachment-"));
+    await mkdir(path.join(root, "topics"), { recursive: true });
+    await mkdir(path.join(root, "artifacts/2026/01"), { recursive: true });
+    await mkdir(path.join(root, "sources/2026/01"), { recursive: true });
+    await writeFile(path.join(root, "topics/topic-a.md"), `---
+schema_version: 1
+id: topic-a
+title: Topic A
+created_at: 2026-01-01
+purpose: Test purpose
+key_questions:
+  - What is Topic A?
+validation_criteria:
+  - Can explain Topic A
+tags: []
+---
+`, "utf8");
+    await writeFile(path.join(root, "sources/2026/01/report.html"), "<!doctype html><title>Original</title>", "utf8");
+    await writeFile(path.join(root, "artifacts/2026/01/report.md"), `---
+schema_version: 1
+id: report-a
+kind: other
+title: Report A
+date: 2026-01-01
+topic_ids:
+  - topic-a
+source:
+  kind: other
+  value: test
+attachments:
+  - path: sources/2026/01/report.html
+    media_type: text/html
+---
+# Report A
+`, "utf8");
+
+    const result = await runBuildProjection({
+      root,
+      asOf: "2026-01-02",
+      outPath: path.join(root, "projection.json"),
+      configPath: path.join(repositoryRoot, "config/beartrace.config.json"),
+    });
+    expect(result.ok).toBe(true);
+    expect(result.projection?.artifacts[0]?.attachments).toEqual([
+      {
+        path: "sources/2026/01/report.html",
+        media_type: "text/html",
+        content: "<!doctype html><title>Original</title>",
+      },
+    ]);
+
+    await writeFile(path.join(root, "artifacts/2026/01/unsafe.md"), `---
+schema_version: 1
+id: unsafe-a
+kind: other
+title: Unsafe
+date: 2026-01-01
+topic_ids:
+  - topic-a
+source:
+  kind: other
+  value: test
+attachments:
+  - path: ../outside.html
+    media_type: text/html
+---
+Unsafe
+`, "utf8");
+    const unsafe = await runValidate(root);
+    expect(unsafe.diagnostics).toContainEqual(expect.objectContaining({
+      code: "E_ATTACHMENT_PATH",
+      path: "artifacts/2026/01/unsafe.md",
+    }));
   });
 });

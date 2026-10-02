@@ -1,6 +1,8 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import {
+  diagnostic,
+  DiagnosticCodes,
   parseRecord,
   sortDiagnostics,
   type ArtifactRecord,
@@ -42,6 +44,77 @@ function toRepoRelativePath(root: string, filePath: string): string {
   return path.relative(root, filePath).split(path.sep).join("/");
 }
 
+function resolveAttachmentPath(root: string, attachmentPath: string): string | null {
+  if (path.isAbsolute(attachmentPath)) return null;
+  const rootPath = path.resolve(root);
+  const resolved = path.resolve(rootPath, attachmentPath);
+  const relative = path.relative(rootPath, resolved);
+  if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    return null;
+  }
+  return resolved;
+}
+
+async function loadArtifactAttachments(root: string, artifact: ArtifactRecord, diagnostics: Diagnostic[]): Promise<void> {
+  const attachments = artifact.frontmatter.attachments ?? [];
+  if (attachments.length === 0) return;
+
+  const rootPath = await realpath(root);
+
+  const loaded = [];
+  for (const attachment of attachments) {
+    if (attachment.media_type !== "text/html") {
+      diagnostics.push(
+        diagnostic(
+          DiagnosticCodes.ATTACHMENT_UNSUPPORTED,
+          artifact.path,
+          `attachment "${attachment.path}" uses unsupported media type "${attachment.media_type}"; only text/html is supported`,
+        ),
+      );
+      continue;
+    }
+
+    const resolved = resolveAttachmentPath(rootPath, attachment.path);
+    if (!resolved) {
+      diagnostics.push(
+        diagnostic(
+          DiagnosticCodes.ATTACHMENT_PATH,
+          artifact.path,
+          `attachment path must stay inside the ledger root: "${attachment.path}"`,
+        ),
+      );
+      continue;
+    }
+
+    try {
+      const realResolved = await realpath(resolved);
+      const relative = path.relative(rootPath, realResolved);
+      if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+        diagnostics.push(
+          diagnostic(
+            DiagnosticCodes.ATTACHMENT_PATH,
+            artifact.path,
+            `attachment path resolves outside the ledger root: "${attachment.path}"`,
+          ),
+        );
+        continue;
+      }
+      const content = await readFile(realResolved, "utf8");
+      loaded.push({ ...attachment, content });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      diagnostics.push(
+        diagnostic(
+          DiagnosticCodes.ATTACHMENT_MISSING,
+          artifact.path,
+          `unable to read attachment "${attachment.path}": ${detail}`,
+        ),
+      );
+    }
+  }
+  if (loaded.length > 0) artifact.attachments = loaded;
+}
+
 export interface LoadedRepository {
   topics: TopicRecord[];
   artifacts: ArtifactRecord[];
@@ -69,6 +142,9 @@ export async function loadRepository(root: string): Promise<LoadedRepository> {
       if (!parsed.ok) {
         result.diagnostics.push(...parsed.diagnostics);
         continue;
+      }
+      if (parsed.record.kind === "artifact") {
+        await loadArtifactAttachments(root, parsed.record, result.diagnostics);
       }
       switch (parsed.record.kind) {
         case "topic":
