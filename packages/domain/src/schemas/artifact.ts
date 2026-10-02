@@ -42,4 +42,6 @@ export interface ArtifactRecord {
 
 export interface ArtifactAttachmentRecord extends ArtifactAttachment {
   content: string;
+  encoding: "utf8" | "base64";
+  size_bytes: number;
 }

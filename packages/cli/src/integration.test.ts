@@ -49,7 +49,11 @@ validation_criteria:
 tags: []
 ---
 `, "utf8");
+    const markdownContent = "# Original Markdown\n";
+    const pdfContent = Buffer.from("%PDF-1.7\n", "utf8");
+    await writeFile(path.join(root, "sources/2026/01/report.md"), markdownContent, "utf8");
     await writeFile(path.join(root, "sources/2026/01/report.html"), "<!doctype html><title>Original</title>", "utf8");
+    await writeFile(path.join(root, "sources/2026/01/report.pdf"), pdfContent);
     await writeFile(path.join(root, "artifacts/2026/01/report.md"), `---
 schema_version: 1
 id: report-a
@@ -62,8 +66,12 @@ source:
   kind: other
   value: test
 attachments:
+  - path: sources/2026/01/report.md
+    media_type: text/markdown
   - path: sources/2026/01/report.html
     media_type: text/html
+  - path: sources/2026/01/report.pdf
+    media_type: application/pdf
 ---
 # Report A
 `, "utf8");
@@ -77,9 +85,25 @@ attachments:
     expect(result.ok).toBe(true);
     expect(result.projection?.artifacts[0]?.attachments).toEqual([
       {
+        path: "sources/2026/01/report.md",
+        media_type: "text/markdown",
+        content: markdownContent,
+        encoding: "utf8",
+        size_bytes: Buffer.byteLength(markdownContent),
+      },
+      {
         path: "sources/2026/01/report.html",
         media_type: "text/html",
         content: "<!doctype html><title>Original</title>",
+        encoding: "utf8",
+        size_bytes: Buffer.byteLength("<!doctype html><title>Original</title>"),
+      },
+      {
+        path: "sources/2026/01/report.pdf",
+        media_type: "application/pdf",
+        content: pdfContent.toString("base64"),
+        encoding: "base64",
+        size_bytes: pdfContent.byteLength,
       },
     ]);
 

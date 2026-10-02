@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Archive,
@@ -6,11 +6,15 @@ import {
   CalendarClock,
   CheckCircle2,
   CircleDashed,
+  Download,
   ExternalLink,
   FileText,
   Layers3,
   LayoutDashboard,
   LockKeyhole,
+  Maximize2,
+  Minimize2,
+  Paperclip,
   RefreshCcw,
   Search,
   ShieldCheck,
@@ -18,6 +22,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type {
+  ArtifactAttachmentProjection,
   ArtifactProjection,
   Capability,
   Projection,
@@ -455,14 +460,62 @@ function ReportLibrary({ projection, selectedArtifactId, setSelectedArtifactId, 
 
 function ReportDetail({ artifact, topicsById }: { artifact: ArtifactProjection; topicsById: Map<string, TopicProjection> }) {
   const sourceIsLink = artifact.source.kind === "url" && /^https?:\/\//.test(artifact.source.value);
-  const htmlAttachment = artifact.attachments?.find((attachment) => attachment.media_type === "text/html");
-  const [view, setView] = useState<"markdown" | "html">("markdown");
+  const attachments = artifact.attachments ?? [];
+  const htmlAttachment = attachments.find((attachment) => attachment.media_type === "text/html");
+  const readerRef = useRef<HTMLElement>(null);
+  const [view, setView] = useState<"markdown" | "html" | "files">("markdown");
+  const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
+  const [nativeFullscreen, setNativeFullscreen] = useState(false);
+
+  useEffect(() => {
+    setView("markdown");
+    setFallbackFullscreen(false);
+  }, [artifact.id]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setNativeFullscreen(document.fullscreenElement === readerRef.current);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const fullscreenActive = nativeFullscreen || fallbackFullscreen;
+
+  async function toggleFullscreen(): Promise<void> {
+    if (fallbackFullscreen) {
+      setFallbackFullscreen(false);
+      return;
+    }
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    const reader = readerRef.current;
+    if (!reader?.requestFullscreen) {
+      setFallbackFullscreen(true);
+      return;
+    }
+    try {
+      await reader.requestFullscreen();
+    } catch {
+      setFallbackFullscreen(true);
+    }
+  }
 
   return (
-    <article className="panel report-reader">
+    <article ref={readerRef} className={`panel report-reader${fallbackFullscreen ? " immersive-fallback" : ""}`}>
       <header className="report-header">
-        <p className="eyebrow">{artifactKindLabels[artifact.kind] ?? "학습 자료"}</p>
-        <h2>{artifact.title}</h2>
+        <div className="report-heading-row">
+          <div>
+            <p className="eyebrow">{artifactKindLabels[artifact.kind] ?? "학습 자료"}</p>
+            <h2>{artifact.title}</h2>
+          </div>
+          <button type="button" className="report-action-button" onClick={() => void toggleFullscreen()} aria-label={fullscreenActive ? "전체 화면 닫기" : "전체 화면으로 보기"}>
+            {fullscreenActive ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+            <span>{fullscreenActive ? "닫기" : "전체 화면"}</span>
+          </button>
+        </div>
         <div className="report-metadata">
           <time dateTime={artifact.date}>{formatDate(artifact.date)}</time>
           <span aria-hidden="true">·</span>
@@ -475,7 +528,7 @@ function ReportDetail({ artifact, topicsById }: { artifact: ArtifactProjection; 
         </div>
         {artifact.source.note ? <p className="source-note">{artifact.source.note}</p> : null}
       </header>
-      {htmlAttachment ? (
+      {attachments.length > 0 ? (
         <div className="report-view-tabs" role="tablist" aria-label="보고서 원문 보기">
           <button
             type="button"
@@ -486,14 +539,25 @@ function ReportDetail({ artifact, topicsById }: { artifact: ArtifactProjection; 
           >
             구조화된 Markdown
           </button>
+          {htmlAttachment ? (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === "html"}
+              className={view === "html" ? "report-view-tab active" : "report-view-tab"}
+              onClick={() => setView("html")}
+            >
+              HTML 원본
+            </button>
+          ) : null}
           <button
             type="button"
             role="tab"
-            aria-selected={view === "html"}
-            className={view === "html" ? "report-view-tab active" : "report-view-tab"}
-            onClick={() => setView("html")}
+            aria-selected={view === "files"}
+            className={view === "files" ? "report-view-tab active" : "report-view-tab"}
+            onClick={() => setView("files")}
           >
-            HTML 원본
+            <Paperclip aria-hidden="true" /> 첨부 파일 <span className="tab-count">{attachments.length}</span>
           </button>
         </div>
       ) : null}
@@ -510,6 +574,8 @@ function ReportDetail({ artifact, topicsById }: { artifact: ArtifactProjection; 
             srcDoc={htmlAttachment.content}
           />
         </section>
+      ) : view === "files" ? (
+        <AttachmentList attachments={attachments} onViewHtml={() => setView("html")} />
       ) : (
         <div className="markdown-body">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
@@ -520,6 +586,76 @@ function ReportDetail({ artifact, topicsById }: { artifact: ArtifactProjection; 
         </div>
       )}
     </article>
+  );
+}
+
+function formatFileSize(sizeBytes: number): string {
+  if (sizeBytes < 1024) return `${sizeBytes} B`;
+  if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function attachmentFilename(filePath: string): string {
+  return filePath.split("/").at(-1) ?? filePath;
+}
+
+function attachmentKind(mediaType: string): string {
+  if (mediaType === "text/html") return "HTML";
+  if (mediaType === "text/markdown") return "Markdown";
+  if (mediaType === "application/pdf") return "PDF";
+  return mediaType;
+}
+
+function AttachmentLink({ attachment }: { attachment: ArtifactAttachmentProjection }) {
+  const href = useMemo(() => {
+    const bytes = attachment.encoding === "base64"
+      ? Uint8Array.from(atob(attachment.content), (character) => character.charCodeAt(0))
+      : attachment.content;
+    const blob = new Blob([bytes], { type: attachment.media_type });
+    return URL.createObjectURL(blob);
+  }, [attachment]);
+
+  useEffect(() => () => URL.revokeObjectURL(href), [href]);
+
+  return (
+    <div className="attachment-actions">
+      {attachment.media_type !== "text/html" ? (
+        <a href={href} target="_blank" rel="noreferrer">열기</a>
+      ) : null}
+      <a href={href} download={attachmentFilename(attachment.path)}>
+        <Download aria-hidden="true" /> 다운로드
+      </a>
+    </div>
+  );
+}
+
+function AttachmentList({ attachments, onViewHtml }: { attachments: ArtifactAttachmentProjection[]; onViewHtml: () => void }) {
+  return (
+    <section className="attachments-panel" aria-label="첨부 파일 목록">
+      <div className="attachments-heading">
+        <div>
+          <p className="eyebrow">원본 파일</p>
+          <h3>보고서에 연결된 첨부 파일</h3>
+        </div>
+        <span>{attachments.length}개</span>
+      </div>
+      <p className="attachments-note">파일은 대시보드 잠금 해제 후 현재 브라우저에서만 복원됩니다.</p>
+      <div className="attachment-list">
+        {attachments.map((attachment) => (
+          <div className="attachment-row" key={attachment.path}>
+            <div className="attachment-icon"><FileText aria-hidden="true" /></div>
+            <div className="attachment-info">
+              <strong>{attachmentFilename(attachment.path)}</strong>
+              <span>{attachmentKind(attachment.media_type)} · {formatFileSize(attachment.size_bytes)}</span>
+            </div>
+            {attachment.media_type === "text/html" ? (
+              <button type="button" className="attachment-view-button" onClick={onViewHtml}>화면에서 보기</button>
+            ) : null}
+            <AttachmentLink attachment={attachment} />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

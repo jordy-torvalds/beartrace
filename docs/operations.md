@@ -58,7 +58,7 @@ validate → projection → dashboard build → encryption → Pages artifact �
 
 Private validation과 Projection 명령의 상세 출력은 public Actions 로그에 노출하지 않습니다. 실패하면 private workspace에서 같은 검증을 실행해 진단합니다.
 
-Artifact의 `attachments`에는 Ledger 내부의 상대 경로와 `media_type: text/html`을 선언할 수 있습니다. 배포 시 HTML 원문은 평문 Pages 파일로 복사하지 않고 암호화 Projection에 포함하며, 잠금 해제 후 대시보드의 `HTML 원본` 탭에서 스크립트가 비활성화된 sandbox 미리보기로 표시합니다. 첨부 경로는 Ledger 루트 밖으로 나갈 수 없습니다.
+Artifact의 `attachments`에는 Ledger 내부의 상대 경로와 `media_type`을 선언할 수 있습니다. 현재 `text/html`, `text/markdown`, `application/pdf`를 지원하며, 배포 시 원본 파일은 평문 Pages 파일로 복사하지 않고 암호화 Projection에 포함합니다. 잠금 해제 후 대시보드의 `HTML 원본` 탭에서 HTML을 sandbox 미리보기로 표시하고, `첨부 파일` 탭에서 세 파일을 열거나 내려받을 수 있습니다. 첨부 경로는 Ledger 루트 밖으로 나갈 수 없습니다.
 
 ## 4. 최초 배포 검증
 

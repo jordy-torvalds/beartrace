@@ -30,6 +30,8 @@ export interface ArtifactAttachmentProjection {
   path: string;
   media_type: string;
   content: string;
+  encoding: "utf8" | "base64";
+  size_bytes: number;
 }
 
 export interface SessionSummary {
@@ -291,6 +293,8 @@ export function buildProjection(repo: ParsedRepository, config: BearTraceConfig,
       path: attachment.path,
       media_type: attachment.media_type,
       content: attachment.content,
+      encoding: attachment.encoding,
+      size_bytes: attachment.size_bytes,
     })),
   }));
 

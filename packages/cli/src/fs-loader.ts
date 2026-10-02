@@ -5,6 +5,7 @@ import {
   DiagnosticCodes,
   parseRecord,
   sortDiagnostics,
+  type ArtifactAttachmentRecord,
   type ArtifactRecord,
   type Diagnostic,
   type EvidenceRecord,
@@ -61,14 +62,16 @@ async function loadArtifactAttachments(root: string, artifact: ArtifactRecord, d
 
   const rootPath = await realpath(root);
 
-  const loaded = [];
+  const loaded: ArtifactAttachmentRecord[] = [];
   for (const attachment of attachments) {
-    if (attachment.media_type !== "text/html") {
+    const isText = attachment.media_type === "text/html" || attachment.media_type === "text/markdown";
+    const isPdf = attachment.media_type === "application/pdf";
+    if (!isText && !isPdf) {
       diagnostics.push(
         diagnostic(
           DiagnosticCodes.ATTACHMENT_UNSUPPORTED,
           artifact.path,
-          `attachment "${attachment.path}" uses unsupported media type "${attachment.media_type}"; only text/html is supported`,
+          `attachment "${attachment.path}" uses unsupported media type "${attachment.media_type}"; supported types are text/html, text/markdown, and application/pdf`,
         ),
       );
       continue;
@@ -99,8 +102,13 @@ async function loadArtifactAttachments(root: string, artifact: ArtifactRecord, d
         );
         continue;
       }
-      const content = await readFile(realResolved, "utf8");
-      loaded.push({ ...attachment, content });
+      const raw = await readFile(realResolved);
+      loaded.push({
+        ...attachment,
+        content: raw.toString(isText ? "utf8" : "base64"),
+        encoding: isText ? "utf8" : "base64",
+        size_bytes: raw.byteLength,
+      });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       diagnostics.push(
