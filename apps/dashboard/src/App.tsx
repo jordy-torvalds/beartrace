@@ -463,24 +463,30 @@ function ReportDetail({ artifact, topicsById }: { artifact: ArtifactProjection; 
   const attachments = artifact.attachments ?? [];
   const htmlAttachment = attachments.find((attachment) => attachment.media_type === "text/html");
   const readerRef = useRef<HTMLElement>(null);
+  const htmlReaderRef = useRef<HTMLElement>(null);
   const [view, setView] = useState<"markdown" | "html" | "files">("markdown");
   const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
   const [nativeFullscreen, setNativeFullscreen] = useState(false);
+  const [htmlFallbackFullscreen, setHtmlFallbackFullscreen] = useState(false);
+  const [htmlNativeFullscreen, setHtmlNativeFullscreen] = useState(false);
 
   useEffect(() => {
     setView("markdown");
     setFallbackFullscreen(false);
+    setHtmlFallbackFullscreen(false);
   }, [artifact.id]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
       setNativeFullscreen(document.fullscreenElement === readerRef.current);
+      setHtmlNativeFullscreen(document.fullscreenElement === htmlReaderRef.current);
     };
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   const fullscreenActive = nativeFullscreen || fallbackFullscreen;
+  const htmlFullscreenActive = htmlNativeFullscreen || htmlFallbackFullscreen;
 
   async function toggleFullscreen(): Promise<void> {
     if (fallbackFullscreen) {
@@ -500,6 +506,27 @@ function ReportDetail({ artifact, topicsById }: { artifact: ArtifactProjection; 
       await reader.requestFullscreen();
     } catch {
       setFallbackFullscreen(true);
+    }
+  }
+
+  async function toggleHtmlFullscreen(): Promise<void> {
+    if (htmlFallbackFullscreen) {
+      setHtmlFallbackFullscreen(false);
+      return;
+    }
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    const htmlReader = htmlReaderRef.current;
+    if (!htmlReader?.requestFullscreen) {
+      setHtmlFallbackFullscreen(true);
+      return;
+    }
+    try {
+      await htmlReader.requestFullscreen();
+    } catch {
+      setHtmlFallbackFullscreen(true);
     }
   }
 
@@ -562,10 +589,16 @@ function ReportDetail({ artifact, topicsById }: { artifact: ArtifactProjection; 
         </div>
       ) : null}
       {view === "html" && htmlAttachment ? (
-        <section className="html-original" aria-label="HTML 원본">
-          <p className="html-original-note">
+        <section ref={htmlReaderRef} className={`html-original${htmlFallbackFullscreen ? " html-immersive-fallback" : ""}`} aria-label="HTML 원본">
+          <div className="html-original-toolbar">
+            <p className="html-original-note">
             잠금 해제된 현재 브라우저에서만 표시합니다. 스크립트는 실행하지 않습니다. 파일명: {htmlAttachment.path}
-          </p>
+            </p>
+            <button type="button" className="report-action-button" onClick={() => void toggleHtmlFullscreen()} aria-label={htmlFullscreenActive ? "HTML 원본 최대화 닫기" : "HTML 원본 최대화"}>
+              {htmlFullscreenActive ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+              <span>{htmlFullscreenActive ? "닫기" : "HTML 크게 보기"}</span>
+            </button>
+          </div>
           <iframe
             title={`${artifact.title} HTML 원본`}
             className="html-original-frame"
